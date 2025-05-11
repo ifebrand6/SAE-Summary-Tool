@@ -4,7 +4,7 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 import io
 import json
-from sae_parser import parse_sae_tables
+from utils.sae_parser import parse_sae_tables
 
 load_dotenv()
 

@@ -1,9 +1,11 @@
 import os
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_file, Response
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 import uuid
+import io
+import json
 from sae_parser import parse_sae_tables
 
 load_dotenv()
@@ -21,6 +23,9 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 # Create uploads directory if it doesn't exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
+# Store the last summary data in memory (for demo purposes)
+last_summary_data = None
+
 def allowed_file(filename):
     """Check if the file extension is allowed"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -31,6 +36,7 @@ def test():
 
 @app.route('/api/upload', methods=['POST'])
 def upload_file():
+    global last_summary_data
     if 'file' not in request.files:
         return jsonify({'error': 'No file part in the request'}), 400
     file = request.files['file']
@@ -46,11 +52,26 @@ def upload_file():
 
         # Use the parser module
         results = parse_sae_tables(file_path)
-        return jsonify({
-            'results': results
-        }), 200
+        last_summary_data = {'results': results}
+        return jsonify(last_summary_data), 200
     except Exception as e:
         return jsonify({'error': f'Error uploading or parsing file: {str(e)}'}), 500
+
+@app.route('/api/download', methods=['GET'])
+def download_summary():
+    global last_summary_data
+    if not last_summary_data:
+        return jsonify({'error': 'No summary data available. Please upload a file first.'}), 400
+    json_str = json.dumps(last_summary_data, indent=2)
+    buf = io.BytesIO(json_str.encode('utf-8'))
+    buf.seek(0)
+    return Response(
+        buf,
+        mimetype='application/json',
+        headers={
+            'Content-Disposition': 'attachment; filename=sae_summary.json'
+        }
+    )
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

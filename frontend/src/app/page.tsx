@@ -1,10 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import axios from 'axios';
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   interface Result {
     table_title?: string;
     table_number?: number;
@@ -47,6 +49,35 @@ export default function Home() {
     }
   };
 
+  const handleDownload = async () => {
+    if (!window.confirm("Do you want to download the summary JSON file?")) {
+      return;
+    }
+    setDownloading(true);
+    setError(null);
+    try {
+      const response = await axios.get('http://localhost:5000/api/download', {
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const a = document.createElement('a');
+      a.href = url;
+      a.setAttribute('download', 'sae_summary.json');
+      document.body.appendChild(a);
+      a.click();
+      a.parentNode?.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An unknown error occurred during download');
+      }
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <main className="container py-5">
       <div className="row justify-content-center">
@@ -69,6 +100,13 @@ export default function Home() {
               {error && <div className="alert alert-danger">{error}</div>}
               {results.length > 0 && (
                 <div className="mt-4">
+                  <button
+                    className="btn btn-success mb-3"
+                    onClick={handleDownload}
+                    disabled={downloading}
+                  >
+                    {downloading ? 'Downloading...' : 'Download JSON'}
+                  </button>
                   {results.map((result, idx) => (
                     <div key={idx} className="mb-4">
                       {result.table_title && (

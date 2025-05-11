@@ -16,6 +16,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [expanded, setExpanded] = useState<{ [key: number]: boolean }>({});
+  const [showAllResults, setShowAllResults] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFile(e.target.files?.[0] || null);
@@ -124,7 +125,7 @@ export default function Home() {
                     </button>
                   )}
                   <div className="row g-3">
-                    {results.map((result, idx) => {
+                    {(showAllResults ? results : results.slice(0, 20)).map((result, idx) => {
                       const showAll = expanded[idx];
                       const summary = result.summary || [];
                       const visible = showAll ? summary : summary.slice(0, 3);
@@ -162,6 +163,16 @@ export default function Home() {
                       );
                     })}
                   </div>
+                  {results.length > 20 && (
+                    <div className="text-center mt-3">
+                      <button
+                        className="btn btn-outline-secondary"
+                        onClick={() => setShowAllResults((prev) => !prev)}
+                      >
+                        {showAllResults ? "Show less results" : `Show ${results.length - 20} more results`}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

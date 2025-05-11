@@ -1,9 +1,7 @@
 import os
-from flask import Flask, jsonify, request, send_file, Response
+from flask import Flask, jsonify, request, Response
 from flask_cors import CORS
-from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
-import uuid
 import io
 import json
 from sae_parser import parse_sae_tables
@@ -45,13 +43,8 @@ def upload_file():
     if not allowed_file(file.filename):
         return jsonify({'error': 'Invalid file format. Only .docx files are allowed'}), 400
     try:
-        # Save the file
-        filename = f"{uuid.uuid4()}_{secure_filename(file.filename)}"
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(file_path)
-
-        # Use the parser module
-        results = parse_sae_tables(file_path)
+        # Use the parser module with file.stream (no need to save to disk)
+        results = parse_sae_tables(file.stream)
         last_summary_data = {'results': results}
         return jsonify(last_summary_data), 200
     except Exception as e:

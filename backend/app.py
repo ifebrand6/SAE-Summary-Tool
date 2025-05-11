@@ -4,6 +4,7 @@ from flask_cors import CORS
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 import uuid
+from sae_parser import parse_sae_tables
 
 load_dotenv()
 
@@ -30,38 +31,28 @@ def test():
 @app.route('/api/upload', methods=['POST'])
 def upload_file():
     if 'file' not in request.files:
-        return jsonify({
-            'error': 'No file part in the request'
-        }), 400
-
+        return jsonify({'error': 'No file part in the request'}), 400
     file = request.files['file']
-
     if file.filename == '':
-        return jsonify({
-            'error': 'No file selected'
-        }), 400
-
+        return jsonify({'error': 'No file selected'}), 400
     if not allowed_file(file.filename):
-        return jsonify({
-            'error': 'Invalid file format. Only .docx files are allowed'
-        }), 400
-
+        return jsonify({'error': 'Invalid file format. Only .docx files are allowed'}), 400
     try:
         # Save the file
         filename = f"{uuid.uuid4()}_{secure_filename(file.filename)}"
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(file_path)
 
+        # Use the parser module
+        extracted_tables = parse_sae_tables(file_path)
+        if not extracted_tables:
+            return jsonify({"error": "No relevant SAE tables found in the document."}), 400
         return jsonify({
-            'message': 'File uploaded successfully',
-            'filename': filename,
-            'file_path': file_path
+            'message': 'File uploaded and parsed successfully',
+            'tables': extracted_tables
         }), 200
-
     except Exception as e:
-        return jsonify({
-            'error': f'Error uploading file: {str(e)}'
-        }), 500
+        return jsonify({'error': f'Error uploading or parsing file: {str(e)}'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
